@@ -1,0 +1,75 @@
+---
+- hosts: all
+  user: root
+  become: true
+  tasks:
+    - name: Update and upgrade apt packages
+      become: true
+      apt:
+          upgrade: yes
+          update_cache: yes
+          cache_valid_time: 86400 #One day
+    - name: install dependencies
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+        state: latest
+    - name: GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+    - name: repository docker
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu focal stable
+        state: present
+    - name: install docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+        state: latest
+        update_cache: yes
+    - name: adding users to group docker
+      user:
+        name: '{{ item }}'
+        groups: docker
+        append: yes
+      loop:
+        - user1
+        - user2
+    - name: Install docker-compose
+      get_url:
+        url : https://github.com/docker/compose/releases/download/1.29.2/docker-compose-Linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '755'
+#    - name: Clone a github repository
+#      git:
+#        repo: https://github.com/lenoox/it-meetup-www.git
+#        dest: /app/it-meetup/it-meetup-www
+#        clone: yes
+#        update: yes
+#    - name: Run container
+#      become: True
+#      shell:
+#        cmd: "docker-compose -f docker-compose.yml up -d"
+#        chdir: /app/it-meetup/it-meetup-www
+    - name: Creates directory
+      ansible.builtin.file:
+        path: /app/it-meetup/
+        state: directory
+    - name: Clone a github repository
+      git:
+        repo: https://github.com/lenoox/it-meetup-api.git
+        dest: /app/it-meetup/it-meetup-api
+        clone: yes
+        update: yes
+    - name: Run container
+      become: True
+      shell:
+        cmd: "docker-compose -f docker-compose.yml up -d"
+        chdir: /app/it-meetup/it-meetup-api
